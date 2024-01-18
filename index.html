@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GitHub Repositories Viewer</title>
+  <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="container">
+  <h2>GitHub Repositories Viewer</h2>
+  <div class="searchDiv">
+      <input type="text" id="usernameInput" placeholder="Enter GitHub username">
+      <button onclick="fetchRepositories()">Search</button>
+  </div>
+  <div class="profileDiv">
+    <div class="profileImg">
+        <img id="profileImage" alt="Profile Image" style="display: none;">
+    </div>
+      <div class="profileContent">
+          <h4 id="usernameHeading" class="UserNameHeading"></h4>
+          <a href="" id="UserLink" target="_blank"></a>
+      </div>
+  </div>
+  <div id="repoList" ></div>
+  <div class="buttons">
+      <button onclick="previousPage()" id="prevBtn" style="display: none;" class="btn">Previous</button>
+      <button onclick="nextPage()" id="nextBtn" style="display: none;" class="btn">Next</button>
+  </div>
+</div>
+
+<script>
+  let currentPage = 1;
+  let totalRepos = 0;
+
+  async function fetchRepositories() {
+    const username = document.getElementById('usernameInput').value;
+
+    if (!username) {
+      alert('Please enter a GitHub username.');
+      return;
+    }
+
+    try {
+      const userResponse = await fetch(`https://api.github.com/users/${username}`);
+      const user = await userResponse.json();
+      const userLink = document.getElementById('UserLink');
+      userLink.innerHTML = `<i class='bx bx-map'></i>https://github.com/${username}`;
+      userLink.href = `https://github.com/${username}`;
+      const usernameHeading = document.getElementById('usernameHeading')
+      usernameHeading.innerHTML =  `UserName: ${username}`
+      const profileImageElement = document.getElementById('profileImage');
+      profileImageElement.src = user.avatar_url;
+      profileImageElement.style.display = 'block';
+
+      if (user.message === 'Not Found') {
+        alert('User not found. Please check the username.');
+        return;
+      }
+      const response = await fetch(`https://api.github.com/users/${username}/repos`);
+      const repos = await response.json();
+
+      totalRepos = repos.length;
+
+      showRepositories(currentPage, repos);
+
+    } catch (error) {
+      console.error('Error fetching repositories:', error.message);
+      alert('Error fetching repositories. Please try again later.');
+    }
+  }
+
+  function showRepositories(page, repos) {
+    const repoListElement = document.getElementById('repoList');
+    repoListElement.innerHTML = '';
+
+    const reposPerPage = 6;
+    const startIndex = (page - 1) * reposPerPage;
+    const endIndex = startIndex + reposPerPage;
+    const displayedRepos = repos.slice(startIndex, endIndex);
+
+    if (displayedRepos.length === 0) {
+      repoListElement.innerHTML = '<p>No public repositories found.</p>';
+    } else {
+      const repoInfo = displayedRepos.map(repo => `<div class="repoContainer"><h3>${repo.name}</h3><p class="DescriptionContainer"> ${repo.description || 'No description available'}</p> <div class="LanguageContaier">${repo.language || 'Language Not Specify'}</div></span><br></div>`).join('');
+      repoListElement.innerHTML = `<div class="repolistElement">${repoInfo}</div>`;
+    }
+
+    updatePaginationButtons();
+  }
+
+  function updatePaginationButtons() {
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+
+    if (totalRepos <= 6) {
+      prevBtn.style.display = 'none';
+      nextBtn.style.display = 'none';
+    } else {
+      if (currentPage === 1) {
+        prevBtn.style.display = 'none';
+        nextBtn.style.display = 'block';
+      } else if (currentPage * 6 >= totalRepos) {
+        prevBtn.style.display = 'block';
+        nextBtn.style.display = 'none';
+      } else {
+        prevBtn.style.display = 'block';
+        nextBtn.style.display = 'block';
+      }
+    }
+  }
+
+  function previousPage() {
+    if (currentPage > 1) {
+      currentPage--;
+      fetchRepositories();
+    }
+  }
+
+  function nextPage() {
+    if (currentPage * 6 < totalRepos) {
+      currentPage++;
+      fetchRepositories();
+    }
+  }
+</script>
+
+</body>
+</html>
